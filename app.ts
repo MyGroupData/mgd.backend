@@ -49,7 +49,7 @@ server.get('/echo/:name', function (req, res, next) {
 
 server.post('/user', function (req, res, next) {
   //res.send(req.params);
-  knex('cars').insert({
+   knex('cars').insert({
     name: req.body.name,
     price: req.body.price
   }).then(function(){
