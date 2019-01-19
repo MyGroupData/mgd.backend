@@ -1,35 +1,20 @@
-var myoptions = {
-    client: 'pg',
-    connection: {
-        host: '127.0.0.1',
-        user: 'postgres',
-        password: 'pgpassword',
-        database: 'pgdb'
-    }
-};
-var knex = require('knex')(myoptions);
-knex.schema.createTable('cars', function (table) {
-    table.increments('id');
-    table.string('name');
-    table.integer('price');
-}).then(function () { return console.log("table created"); })
-    .catch(function (err) { console.log(err); throw err; })
-    .finally(function () {
-    console.log("finally of createTable called");
-});
-knex('cars').insert({
-    name: "toyt",
-    price: 100
-}).then(function () {
-    console.log("insert done");
-}).catch(function (err) {
-    console.log(err);
-});
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var db_utils_1 = require("./db_utils");
 var restify = require('restify');
 var server = restify.createServer({
     name: 'myapp',
     version: '1.0.0'
 });
+var corsMiddleware = require('restify-cors-middleware');
+var cors = corsMiddleware({
+    preflightMaxAge: 5,
+    origins: ['*'],
+    allowHeaders: ['API-Token'],
+    exposeHeaders: ['API-Token-Expiry']
+});
+server.pre(cors.preflight);
+server.use(cors.actual);
 server.use(restify.plugins.acceptParser(server.acceptable));
 server.use(restify.plugins.queryParser());
 server.use(restify.plugins.bodyParser());
@@ -37,20 +22,22 @@ server.get('/echo/:name', function (req, res, next) {
     res.send(req.params);
     return next();
 });
+server.get('/users', function (req, res, next) {
+    console.log("got a GET users msg");
+    db.getUsers(function (users) {
+        res.send(users);
+        return next();
+    });
+});
 server.post('/user', function (req, res, next) {
     //res.send(req.params);
-    knex('cars').insert({
-        name: req.body.name,
-        price: req.body.price
-    }).then(function () {
-        console.log("insert done");
-    }).catch(function (err) {
-        console.log(err);
-    });
-    return next();
+    console.log("got a POST user msg - " + req.body);
+    db.insertUser(req.body.name, req.body.birthday);
 });
+var db = new db_utils_1.mgdXnex();
 server.listen(8080, function () {
     console.log('%s listening at %s', server.name, server.url);
+    db.createUsersTable();
 });
 /*
 var http = require('http');
@@ -69,10 +56,10 @@ http.createServer(function (req, res) {
   var logger = require('morgan');
  /*
   var app = express();
-  
+
   app.use(bodyParser.json())
   app.use(bodyParser.urlencoded({ extended: false }));
-  
+
   app.get('/todos', function(req, res) {
     knex.select()
         .from('todos')
@@ -80,7 +67,7 @@ http.createServer(function (req, res) {
           res.send(todos);
         })
   })
-  
+
   app.get('/todos-of-user/:id', function(req, res) {
     knex.from('todos')
         .innerJoin('users', 'todos.user_id', 'users.id')
@@ -89,7 +76,7 @@ http.createServer(function (req, res) {
           res.send(data)
         })
   })
-  
+
   app.get('/todos/:id', function(req, res) {
     knex.select()
         .from('todos')
@@ -98,7 +85,7 @@ http.createServer(function (req, res) {
           res.send(todos);
         })
   })
-  
+
   app.post('/todos', function(req, res) {
     knex('todos').insert({
       title: req.body.title,
@@ -112,7 +99,7 @@ http.createServer(function (req, res) {
           })
     })
   })
-  
+
   app.put('/todos/:id', function(req, res) {
     knex('todos').where('id', req.params.id)
                 .update({
@@ -127,7 +114,7 @@ http.createServer(function (req, res) {
                       })
                 })
   })
-  
+
   app.delete('/todos/:id', function(req, res) {
     knex('todos').where('id', req.params.id)
                  .del()
@@ -140,8 +127,8 @@ http.createServer(function (req, res) {
                  });
   })
 
-  
-  
+
+
   app.listen(port, function() {
     console.log("listening on port: ", port);
   })
